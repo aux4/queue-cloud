@@ -1,7 +1,7 @@
 {
   "scope": "aux4",
   "name": "queue-cloud",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "aux4.cloud provider plugin for aux4/queue's work-queue mode (--provider cloud) -- aux4/queue-sqs pre-configured with scope-prefixed queue names and cloud defaults",
   "license": "Apache-2.0",
   "tags": [
