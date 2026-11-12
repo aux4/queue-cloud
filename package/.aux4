@@ -1,8 +1,8 @@
 {
   "scope": "aux4",
   "name": "queue-cloud",
-  "version": "0.1.1",
-  "description": "aux4.cloud provider plugin for aux4/queue's work-queue mode (--provider cloud) -- aux4/queue-sqs pre-configured with scope-prefixed queue names and cloud defaults",
+  "version": "0.2.0",
+  "description": "aux4.cloud provider plugin for aux4/queue's work-queue mode (--provider cloud) -- aux4/queue-sqs pre-configured with env+scope-prefixed queue names and cloud defaults",
   "license": "Apache-2.0",
   "tags": [
     "aux4",
@@ -15,6 +15,14 @@
   ],
   "dependencies": [
     "aux4/queue-sqs"
+  ],
+  "system": [
+    [
+      "test:aws --version",
+      "brew:awscli",
+      "apt:awscli",
+      "dnf:awscli"
+    ]
   ],
   "profiles": [
     {
@@ -38,17 +46,23 @@
         {
           "name": "start",
           "execute": [
-            "log:sqs storage ready via aux4/queue-cloud (scope=${scope}, region=${region}); no server process needed"
+            "log:sqs storage ready via aux4/queue-cloud (env=${env}, scope=${scope}, region=${region}); no server process needed"
           ],
           "private": true,
           "help": {
             "text": "cloud provider: validate readiness (no server process)",
             "variables": [
               {
-                "name": "scope",
-                "text": "aux4.cloud scope prefix for the underlying SQS queue name. Resolved from --scope or the AUX4_SCOPE environment variable the machine runs with; required (no default) so a queue is never accidentally created unscoped",
+                "name": "env",
+                "text": "aux4.cloud environment prefix for the underlying SQS queue name. Resolved from --env or the AUX4_CLOUD_ENV environment variable aux4.cloud machines set on deploy",
                 "default": "",
-                "env": "AUX4_SCOPE"
+                "env": "AUX4_CLOUD_ENV"
+              },
+              {
+                "name": "scope",
+                "text": "aux4.cloud scope prefix for the underlying SQS queue name. Resolved from --scope or the AUX4_CLOUD_SCOPE environment variable aux4.cloud machines set on deploy",
+                "default": "",
+                "env": "AUX4_CLOUD_SCOPE"
               },
               {
                 "name": "region",
@@ -72,19 +86,32 @@
         {
           "name": "create",
           "execute": [
-            "if(scope==) && echo 'Error: --scope is required (or set AUX4_SCOPE) -- aux4/queue-cloud always scope-prefixes the underlying SQS queue name' && exit 1 || true",
-            "set:cloudName=${scope}-${name}",
+            "if(env==) && echo 'Error: --env is required (or set AUX4_CLOUD_ENV) -- aux4/queue-cloud names queues <env>--<scope>--<name>' && exit 1 || true",
+            "if(scope==) && echo 'Error: --scope is required (or set AUX4_CLOUD_SCOPE) -- aux4/queue-cloud names queues <env>--<scope>--<name>' && exit 1 || true",
+            "nout:echo value(env) value(scope) value(name) | grep -q -- '--'; echo $?",
+            "set:hasDoubleDash=${response}",
+            "if(hasDoubleDash==0) && echo \"Error: --env/--scope/--name must not contain '--' (reserved as the queue-name field separator)\" && exit 1 || true",
+            "set:cloudName=${env}--${scope}--${name}",
+            "nout:echo -n '${cloudName}-dlq.fifo' | grep -qE '^.{81,}$'; echo $?",
+            "set:tooLong=${response}",
+            "if(tooLong==0) && echo \"Error: resulting queue name '${cloudName}' (plus -dlq.fifo) exceeds the 80-character AWS SQS queue-name limit -- shorten --env/--scope/--name\" && exit 1 || true",
             "AWS_DEFAULT_REGION=value(region) aux4 queue sqs create --name value(cloudName) param(maxAttempts)"
           ],
           "private": true,
           "help": {
-            "text": "cloud provider: create a scope-prefixed durable work queue and its dead-letter queue",
+            "text": "cloud provider: create an env+scope-prefixed durable work queue and its dead-letter queue",
             "variables": [
               {
-                "name": "scope",
-                "text": "aux4.cloud scope prefix for the underlying SQS queue name. Resolved from --scope or the AUX4_SCOPE environment variable the machine runs with; required (no default) so a queue is never accidentally created unscoped",
+                "name": "env",
+                "text": "aux4.cloud environment prefix for the underlying SQS queue name. Resolved from --env or the AUX4_CLOUD_ENV environment variable aux4.cloud machines set on deploy; required (no default) so a queue is never accidentally created unscoped",
                 "default": "",
-                "env": "AUX4_SCOPE"
+                "env": "AUX4_CLOUD_ENV"
+              },
+              {
+                "name": "scope",
+                "text": "aux4.cloud scope prefix for the underlying SQS queue name. Resolved from --scope or the AUX4_CLOUD_SCOPE environment variable aux4.cloud machines set on deploy; required (no default) so a queue is never accidentally created unscoped",
+                "default": "",
+                "env": "AUX4_CLOUD_SCOPE"
               },
               {
                 "name": "region",
@@ -93,7 +120,7 @@
               },
               {
                 "name": "name",
-                "text": "Queue name (will be prefixed with the scope, e.g. myscope-jobs)",
+                "text": "Queue name (final SQS name is <env>--<scope>--<name>, e.g. dev--myscope--jobs)",
                 "default": ""
               },
               {
@@ -107,19 +134,29 @@
         {
           "name": "delete",
           "execute": [
-            "if(scope==) && echo 'Error: --scope is required (or set AUX4_SCOPE) -- aux4/queue-cloud always scope-prefixes the underlying SQS queue name' && exit 1 || true",
-            "set:cloudName=${scope}-${name}",
+            "if(env==) && echo 'Error: --env is required (or set AUX4_CLOUD_ENV) -- aux4/queue-cloud names queues <env>--<scope>--<name>' && exit 1 || true",
+            "if(scope==) && echo 'Error: --scope is required (or set AUX4_CLOUD_SCOPE) -- aux4/queue-cloud names queues <env>--<scope>--<name>' && exit 1 || true",
+            "nout:echo value(env) value(scope) value(name) | grep -q -- '--'; echo $?",
+            "set:hasDoubleDash=${response}",
+            "if(hasDoubleDash==0) && echo \"Error: --env/--scope/--name must not contain '--' (reserved as the queue-name field separator)\" && exit 1 || true",
+            "set:cloudName=${env}--${scope}--${name}",
             "AWS_DEFAULT_REGION=value(region) aux4 queue sqs delete --name value(cloudName) "
           ],
           "private": true,
           "help": {
-            "text": "cloud provider: delete a scope-prefixed queue and its dead-letter queue",
+            "text": "cloud provider: delete an env+scope-prefixed queue and its dead-letter queue",
             "variables": [
               {
-                "name": "scope",
-                "text": "aux4.cloud scope prefix for the underlying SQS queue name. Resolved from --scope or the AUX4_SCOPE environment variable the machine runs with; required (no default) so a queue is never accidentally created unscoped",
+                "name": "env",
+                "text": "aux4.cloud environment prefix for the underlying SQS queue name. Resolved from --env or the AUX4_CLOUD_ENV environment variable aux4.cloud machines set on deploy; required (no default) so a queue is never accidentally created unscoped",
                 "default": "",
-                "env": "AUX4_SCOPE"
+                "env": "AUX4_CLOUD_ENV"
+              },
+              {
+                "name": "scope",
+                "text": "aux4.cloud scope prefix for the underlying SQS queue name. Resolved from --scope or the AUX4_CLOUD_SCOPE environment variable aux4.cloud machines set on deploy; required (no default) so a queue is never accidentally created unscoped",
+                "default": "",
+                "env": "AUX4_CLOUD_SCOPE"
               },
               {
                 "name": "region",
@@ -128,7 +165,7 @@
               },
               {
                 "name": "name",
-                "text": "Queue name (will be prefixed with the scope, e.g. myscope-jobs)",
+                "text": "Queue name (final SQS name is <env>--<scope>--<name>, e.g. dev--myscope--jobs)",
                 "default": ""
               }
             ]
@@ -137,18 +174,26 @@
         {
           "name": "list",
           "execute": [
-            "if(scope==) && echo 'Error: --scope is required (or set AUX4_SCOPE) -- aux4/queue-cloud always scope-prefixes the underlying SQS queue name' && exit 1 || true",
-            "AWS_DEFAULT_REGION=value(region) aux4 queue sqs list"
+            "if(env==) && echo 'Error: --env is required (or set AUX4_CLOUD_ENV) -- aux4/queue-cloud names queues <env>--<scope>--<name>' && exit 1 || true",
+            "if(scope==) && echo 'Error: --scope is required (or set AUX4_CLOUD_SCOPE) -- aux4/queue-cloud names queues <env>--<scope>--<name>' && exit 1 || true",
+            "set:prefix=${env}--${scope}--",
+            "AWS_DEFAULT_REGION=value(region) aws sqs list-queues --queue-name-prefix value(prefix) --output json"
           ],
           "private": true,
           "help": {
-            "text": "cloud provider: list every queue at this scope's SQS endpoint, including dead-letter queues (not filtered to just this scope's prefix -- the underlying account may hold other scopes' queues too)",
+            "text": "cloud provider: list every queue (including dead-letter queues) whose name starts with this env+scope's prefix, via 'aws sqs list-queues --queue-name-prefix'. There is currently no per-queue access control -- anything running at this env+scope can see and use every queue created at it",
             "variables": [
               {
-                "name": "scope",
-                "text": "aux4.cloud scope prefix for the underlying SQS queue name. Resolved from --scope or the AUX4_SCOPE environment variable the machine runs with; required (no default) so a queue is never accidentally created unscoped",
+                "name": "env",
+                "text": "aux4.cloud environment prefix for the underlying SQS queue name. Resolved from --env or the AUX4_CLOUD_ENV environment variable aux4.cloud machines set on deploy; required (no default)",
                 "default": "",
-                "env": "AUX4_SCOPE"
+                "env": "AUX4_CLOUD_ENV"
+              },
+              {
+                "name": "scope",
+                "text": "aux4.cloud scope prefix for the underlying SQS queue name. Resolved from --scope or the AUX4_CLOUD_SCOPE environment variable aux4.cloud machines set on deploy; required (no default)",
+                "default": "",
+                "env": "AUX4_CLOUD_SCOPE"
               },
               {
                 "name": "region",
@@ -161,19 +206,29 @@
         {
           "name": "send",
           "execute": [
-            "if(scope==) && echo 'Error: --scope is required (or set AUX4_SCOPE) -- aux4/queue-cloud always scope-prefixes the underlying SQS queue name' && exit 1 || true",
-            "set:cloudName=${scope}-${name}",
+            "if(env==) && echo 'Error: --env is required (or set AUX4_CLOUD_ENV) -- aux4/queue-cloud names queues <env>--<scope>--<name>' && exit 1 || true",
+            "if(scope==) && echo 'Error: --scope is required (or set AUX4_CLOUD_SCOPE) -- aux4/queue-cloud names queues <env>--<scope>--<name>' && exit 1 || true",
+            "nout:echo value(env) value(scope) value(name) | grep -q -- '--'; echo $?",
+            "set:hasDoubleDash=${response}",
+            "if(hasDoubleDash==0) && echo \"Error: --env/--scope/--name must not contain '--' (reserved as the queue-name field separator)\" && exit 1 || true",
+            "set:cloudName=${env}--${scope}--${name}",
             "stdin:AWS_DEFAULT_REGION=value(region) aux4 queue sqs send --name value(cloudName) param(group)"
           ],
           "private": true,
           "help": {
-            "text": "cloud provider: send a message (from stdin) to a scope-prefixed queue",
+            "text": "cloud provider: send a message (from stdin) to an env+scope-prefixed queue",
             "variables": [
               {
-                "name": "scope",
-                "text": "aux4.cloud scope prefix for the underlying SQS queue name. Resolved from --scope or the AUX4_SCOPE environment variable the machine runs with; required (no default) so a queue is never accidentally created unscoped",
+                "name": "env",
+                "text": "aux4.cloud environment prefix for the underlying SQS queue name. Resolved from --env or the AUX4_CLOUD_ENV environment variable aux4.cloud machines set on deploy; required (no default) so a queue is never accidentally created unscoped",
                 "default": "",
-                "env": "AUX4_SCOPE"
+                "env": "AUX4_CLOUD_ENV"
+              },
+              {
+                "name": "scope",
+                "text": "aux4.cloud scope prefix for the underlying SQS queue name. Resolved from --scope or the AUX4_CLOUD_SCOPE environment variable aux4.cloud machines set on deploy; required (no default) so a queue is never accidentally created unscoped",
+                "default": "",
+                "env": "AUX4_CLOUD_SCOPE"
               },
               {
                 "name": "region",
@@ -182,7 +237,7 @@
               },
               {
                 "name": "name",
-                "text": "Queue name (will be prefixed with the scope, e.g. myscope-jobs)",
+                "text": "Queue name (final SQS name is <env>--<scope>--<name>, e.g. dev--myscope--jobs)",
                 "default": ""
               },
               {
@@ -196,19 +251,29 @@
         {
           "name": "lease",
           "execute": [
-            "if(scope==) && echo 'Error: --scope is required (or set AUX4_SCOPE) -- aux4/queue-cloud always scope-prefixes the underlying SQS queue name' && exit 1 || true",
-            "set:cloudName=${scope}-${name}",
+            "if(env==) && echo 'Error: --env is required (or set AUX4_CLOUD_ENV) -- aux4/queue-cloud names queues <env>--<scope>--<name>' && exit 1 || true",
+            "if(scope==) && echo 'Error: --scope is required (or set AUX4_CLOUD_SCOPE) -- aux4/queue-cloud names queues <env>--<scope>--<name>' && exit 1 || true",
+            "nout:echo value(env) value(scope) value(name) | grep -q -- '--'; echo $?",
+            "set:hasDoubleDash=${response}",
+            "if(hasDoubleDash==0) && echo \"Error: --env/--scope/--name must not contain '--' (reserved as the queue-name field separator)\" && exit 1 || true",
+            "set:cloudName=${env}--${scope}--${name}",
             "AWS_DEFAULT_REGION=value(region) aux4 queue sqs lease --name value(cloudName) param(visibility)"
           ],
           "private": true,
           "help": {
-            "text": "cloud provider: lease the next eligible message from a scope-prefixed queue",
+            "text": "cloud provider: lease the next eligible message from an env+scope-prefixed queue",
             "variables": [
               {
-                "name": "scope",
-                "text": "aux4.cloud scope prefix for the underlying SQS queue name. Resolved from --scope or the AUX4_SCOPE environment variable the machine runs with; required (no default) so a queue is never accidentally created unscoped",
+                "name": "env",
+                "text": "aux4.cloud environment prefix for the underlying SQS queue name. Resolved from --env or the AUX4_CLOUD_ENV environment variable aux4.cloud machines set on deploy; required (no default) so a queue is never accidentally created unscoped",
                 "default": "",
-                "env": "AUX4_SCOPE"
+                "env": "AUX4_CLOUD_ENV"
+              },
+              {
+                "name": "scope",
+                "text": "aux4.cloud scope prefix for the underlying SQS queue name. Resolved from --scope or the AUX4_CLOUD_SCOPE environment variable aux4.cloud machines set on deploy; required (no default) so a queue is never accidentally created unscoped",
+                "default": "",
+                "env": "AUX4_CLOUD_SCOPE"
               },
               {
                 "name": "region",
@@ -217,7 +282,7 @@
               },
               {
                 "name": "name",
-                "text": "Queue name (will be prefixed with the scope, e.g. myscope-jobs)",
+                "text": "Queue name (final SQS name is <env>--<scope>--<name>, e.g. dev--myscope--jobs)",
                 "default": ""
               },
               {
@@ -231,8 +296,12 @@
         {
           "name": "renew",
           "execute": [
-            "if(scope==) && echo 'Error: --scope is required (or set AUX4_SCOPE) -- aux4/queue-cloud always scope-prefixes the underlying SQS queue name' && exit 1 || true",
-            "set:cloudName=${scope}-${name}",
+            "if(env==) && echo 'Error: --env is required (or set AUX4_CLOUD_ENV) -- aux4/queue-cloud names queues <env>--<scope>--<name>' && exit 1 || true",
+            "if(scope==) && echo 'Error: --scope is required (or set AUX4_CLOUD_SCOPE) -- aux4/queue-cloud names queues <env>--<scope>--<name>' && exit 1 || true",
+            "nout:echo value(env) value(scope) value(name) | grep -q -- '--'; echo $?",
+            "set:hasDoubleDash=${response}",
+            "if(hasDoubleDash==0) && echo \"Error: --env/--scope/--name must not contain '--' (reserved as the queue-name field separator)\" && exit 1 || true",
+            "set:cloudName=${env}--${scope}--${name}",
             "AWS_DEFAULT_REGION=value(region) aux4 queue sqs renew --name value(cloudName) param(leaseId) param(id) param(visibility)"
           ],
           "private": true,
@@ -240,10 +309,16 @@
             "text": "cloud provider: extend a still-live lease",
             "variables": [
               {
-                "name": "scope",
-                "text": "aux4.cloud scope prefix for the underlying SQS queue name. Resolved from --scope or the AUX4_SCOPE environment variable the machine runs with; required (no default) so a queue is never accidentally created unscoped",
+                "name": "env",
+                "text": "aux4.cloud environment prefix for the underlying SQS queue name. Resolved from --env or the AUX4_CLOUD_ENV environment variable aux4.cloud machines set on deploy; required (no default) so a queue is never accidentally created unscoped",
                 "default": "",
-                "env": "AUX4_SCOPE"
+                "env": "AUX4_CLOUD_ENV"
+              },
+              {
+                "name": "scope",
+                "text": "aux4.cloud scope prefix for the underlying SQS queue name. Resolved from --scope or the AUX4_CLOUD_SCOPE environment variable aux4.cloud machines set on deploy; required (no default) so a queue is never accidentally created unscoped",
+                "default": "",
+                "env": "AUX4_CLOUD_SCOPE"
               },
               {
                 "name": "region",
@@ -252,7 +327,7 @@
               },
               {
                 "name": "name",
-                "text": "Queue name (will be prefixed with the scope, e.g. myscope-jobs)",
+                "text": "Queue name (final SQS name is <env>--<scope>--<name>, e.g. dev--myscope--jobs)",
                 "default": ""
               },
               {
@@ -276,8 +351,12 @@
         {
           "name": "ack",
           "execute": [
-            "if(scope==) && echo 'Error: --scope is required (or set AUX4_SCOPE) -- aux4/queue-cloud always scope-prefixes the underlying SQS queue name' && exit 1 || true",
-            "set:cloudName=${scope}-${name}",
+            "if(env==) && echo 'Error: --env is required (or set AUX4_CLOUD_ENV) -- aux4/queue-cloud names queues <env>--<scope>--<name>' && exit 1 || true",
+            "if(scope==) && echo 'Error: --scope is required (or set AUX4_CLOUD_SCOPE) -- aux4/queue-cloud names queues <env>--<scope>--<name>' && exit 1 || true",
+            "nout:echo value(env) value(scope) value(name) | grep -q -- '--'; echo $?",
+            "set:hasDoubleDash=${response}",
+            "if(hasDoubleDash==0) && echo \"Error: --env/--scope/--name must not contain '--' (reserved as the queue-name field separator)\" && exit 1 || true",
+            "set:cloudName=${env}--${scope}--${name}",
             "AWS_DEFAULT_REGION=value(region) aux4 queue sqs ack --name value(cloudName) param(leaseId) param(id)"
           ],
           "private": true,
@@ -285,10 +364,16 @@
             "text": "cloud provider: delete a completed message",
             "variables": [
               {
-                "name": "scope",
-                "text": "aux4.cloud scope prefix for the underlying SQS queue name. Resolved from --scope or the AUX4_SCOPE environment variable the machine runs with; required (no default) so a queue is never accidentally created unscoped",
+                "name": "env",
+                "text": "aux4.cloud environment prefix for the underlying SQS queue name. Resolved from --env or the AUX4_CLOUD_ENV environment variable aux4.cloud machines set on deploy; required (no default) so a queue is never accidentally created unscoped",
                 "default": "",
-                "env": "AUX4_SCOPE"
+                "env": "AUX4_CLOUD_ENV"
+              },
+              {
+                "name": "scope",
+                "text": "aux4.cloud scope prefix for the underlying SQS queue name. Resolved from --scope or the AUX4_CLOUD_SCOPE environment variable aux4.cloud machines set on deploy; required (no default) so a queue is never accidentally created unscoped",
+                "default": "",
+                "env": "AUX4_CLOUD_SCOPE"
               },
               {
                 "name": "region",
@@ -297,7 +382,7 @@
               },
               {
                 "name": "name",
-                "text": "Queue name (will be prefixed with the scope, e.g. myscope-jobs)",
+                "text": "Queue name (final SQS name is <env>--<scope>--<name>, e.g. dev--myscope--jobs)",
                 "default": ""
               },
               {
@@ -316,8 +401,12 @@
         {
           "name": "nack",
           "execute": [
-            "if(scope==) && echo 'Error: --scope is required (or set AUX4_SCOPE) -- aux4/queue-cloud always scope-prefixes the underlying SQS queue name' && exit 1 || true",
-            "set:cloudName=${scope}-${name}",
+            "if(env==) && echo 'Error: --env is required (or set AUX4_CLOUD_ENV) -- aux4/queue-cloud names queues <env>--<scope>--<name>' && exit 1 || true",
+            "if(scope==) && echo 'Error: --scope is required (or set AUX4_CLOUD_SCOPE) -- aux4/queue-cloud names queues <env>--<scope>--<name>' && exit 1 || true",
+            "nout:echo value(env) value(scope) value(name) | grep -q -- '--'; echo $?",
+            "set:hasDoubleDash=${response}",
+            "if(hasDoubleDash==0) && echo \"Error: --env/--scope/--name must not contain '--' (reserved as the queue-name field separator)\" && exit 1 || true",
+            "set:cloudName=${env}--${scope}--${name}",
             "AWS_DEFAULT_REGION=value(region) aux4 queue sqs nack --name value(cloudName) param(leaseId) param(id)"
           ],
           "private": true,
@@ -325,10 +414,16 @@
             "text": "cloud provider: release a leased message for immediate redelivery",
             "variables": [
               {
-                "name": "scope",
-                "text": "aux4.cloud scope prefix for the underlying SQS queue name. Resolved from --scope or the AUX4_SCOPE environment variable the machine runs with; required (no default) so a queue is never accidentally created unscoped",
+                "name": "env",
+                "text": "aux4.cloud environment prefix for the underlying SQS queue name. Resolved from --env or the AUX4_CLOUD_ENV environment variable aux4.cloud machines set on deploy; required (no default) so a queue is never accidentally created unscoped",
                 "default": "",
-                "env": "AUX4_SCOPE"
+                "env": "AUX4_CLOUD_ENV"
+              },
+              {
+                "name": "scope",
+                "text": "aux4.cloud scope prefix for the underlying SQS queue name. Resolved from --scope or the AUX4_CLOUD_SCOPE environment variable aux4.cloud machines set on deploy; required (no default) so a queue is never accidentally created unscoped",
+                "default": "",
+                "env": "AUX4_CLOUD_SCOPE"
               },
               {
                 "name": "region",
@@ -337,7 +432,7 @@
               },
               {
                 "name": "name",
-                "text": "Queue name (will be prefixed with the scope, e.g. myscope-jobs)",
+                "text": "Queue name (final SQS name is <env>--<scope>--<name>, e.g. dev--myscope--jobs)",
                 "default": ""
               },
               {
@@ -356,19 +451,29 @@
         {
           "name": "dlq",
           "execute": [
-            "if(scope==) && echo 'Error: --scope is required (or set AUX4_SCOPE) -- aux4/queue-cloud always scope-prefixes the underlying SQS queue name' && exit 1 || true",
-            "set:cloudName=${scope}-${name}",
+            "if(env==) && echo 'Error: --env is required (or set AUX4_CLOUD_ENV) -- aux4/queue-cloud names queues <env>--<scope>--<name>' && exit 1 || true",
+            "if(scope==) && echo 'Error: --scope is required (or set AUX4_CLOUD_SCOPE) -- aux4/queue-cloud names queues <env>--<scope>--<name>' && exit 1 || true",
+            "nout:echo value(env) value(scope) value(name) | grep -q -- '--'; echo $?",
+            "set:hasDoubleDash=${response}",
+            "if(hasDoubleDash==0) && echo \"Error: --env/--scope/--name must not contain '--' (reserved as the queue-name field separator)\" && exit 1 || true",
+            "set:cloudName=${env}--${scope}--${name}",
             "AWS_DEFAULT_REGION=value(region) aux4 queue sqs dlq --name value(cloudName) "
           ],
           "private": true,
           "help": {
-            "text": "cloud provider: list up to 10 dead-letter messages for a scope-prefixed queue",
+            "text": "cloud provider: list up to 10 dead-letter messages for an env+scope-prefixed queue",
             "variables": [
               {
-                "name": "scope",
-                "text": "aux4.cloud scope prefix for the underlying SQS queue name. Resolved from --scope or the AUX4_SCOPE environment variable the machine runs with; required (no default) so a queue is never accidentally created unscoped",
+                "name": "env",
+                "text": "aux4.cloud environment prefix for the underlying SQS queue name. Resolved from --env or the AUX4_CLOUD_ENV environment variable aux4.cloud machines set on deploy; required (no default) so a queue is never accidentally created unscoped",
                 "default": "",
-                "env": "AUX4_SCOPE"
+                "env": "AUX4_CLOUD_ENV"
+              },
+              {
+                "name": "scope",
+                "text": "aux4.cloud scope prefix for the underlying SQS queue name. Resolved from --scope or the AUX4_CLOUD_SCOPE environment variable aux4.cloud machines set on deploy; required (no default) so a queue is never accidentally created unscoped",
+                "default": "",
+                "env": "AUX4_CLOUD_SCOPE"
               },
               {
                 "name": "region",
@@ -377,7 +482,7 @@
               },
               {
                 "name": "name",
-                "text": "Queue name (will be prefixed with the scope, e.g. myscope-jobs)",
+                "text": "Queue name (final SQS name is <env>--<scope>--<name>, e.g. dev--myscope--jobs)",
                 "default": ""
               },
               {

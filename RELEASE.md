@@ -1,5 +1,26 @@
 # Release Notes
 
+## 0.2.0
+
+- **BREAKING naming change**: the underlying SQS queue name is now `<env>--<scope>--<name>`
+  (DOUBLE dash separators), not `<scope>-<name>`. Double dashes let an IAM policy safely prefix on
+  `<env>--<scope>--*` even though scope names may contain a single `-` (a single-dash scheme would
+  let a `dev-` prefix also match an unrelated scope literally named `foo-bar`). The DLQ is
+  `<env>--<scope>--<name>-dlq`; `.fifo` is appended as before.
+- New required `--env` (or `AUX4_CLOUD_ENV`) alongside the existing `--scope`
+  (or `AUX4_CLOUD_SCOPE`, renamed from `AUX4_SCOPE`). Omitting either fails fast with a clear
+  error; neither is ever guessed/defaulted.
+- `--env`/`--scope`/`--name` are rejected if they contain `--` (reserved as the field separator),
+  and a resulting name over 80 characters (including the `-dlq.fifo`/`.fifo` suffix) is rejected
+  rather than truncated.
+- The machine/VM a command runs on is never part of the queue name — queues are shared across
+  every machine at a given env+scope.
+- `queue list --provider cloud` is supported: it calls `aws sqs list-queues --queue-name-prefix
+  <env>--<scope>--` directly, so it only returns queues belonging to the calling env+scope and
+  never performs a bare, account-wide `ListQueues`. There is currently no per-queue access control
+  — anything reachable at a given env+scope can see/use every queue created there; this is
+  documented as the current access model, not a bug.
+
 ## 0.1.0
 
 - Initial release: aux4.cloud provider plugin for `aux4/queue`'s work-queue mode.
