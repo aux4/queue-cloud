@@ -92,9 +92,10 @@
             "set:hasDoubleDash=${response}",
             "if(hasDoubleDash==0) && echo \"Error: --env/--scope/--name must not contain '--' (reserved as the queue-name field separator)\" && exit 1 || true",
             "set:cloudName=${env}--${scope}--${name}",
-            "nout:echo -n '${cloudName}-dlq.fifo' | grep -qE '^.{81,}$'; echo $?",
+            "set:dlqName=${env}--${scope}--${name}-dlq.fifo",
+            "nout:echo -n value(dlqName) | grep -qE '^.{81,}$'; echo $?",
             "set:tooLong=${response}",
-            "if(tooLong==0) && echo \"Error: resulting queue name '${cloudName}' (plus -dlq.fifo) exceeds the 80-character AWS SQS queue-name limit -- shorten --env/--scope/--name\" && exit 1 || true",
+            "if(tooLong==0) && echo 'Error: resulting queue name' value(cloudName) 'exceeds the 80-character AWS SQS queue-name limit (counting the -dlq.fifo suffix) -- shorten --env/--scope/--name' && exit 1 || true",
             "AWS_DEFAULT_REGION=value(region) aux4 queue sqs create --name value(cloudName) param(maxAttempts)"
           ],
           "private": true,
