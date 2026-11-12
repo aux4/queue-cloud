@@ -1,5 +1,12 @@
 # Release Notes
 
+## 0.2.2 (unreleased)
+
+- Test fix only (no code change here): updated this package's own `lease` test to expect
+  `attempts: 0` on the first delivery, matching `aux4/queue-sqs`'s fix for the `attempts`
+  off-by-one (see `aux4/queue-sqs` RELEASE notes) -- `queue-cloud`'s `lease` delegates directly to
+  `queue sqs lease`, so it inherited the same fix automatically once `aux4/queue-sqs` is updated.
+
 ## 0.2.0
 
 - **BREAKING naming change**: the underlying SQS queue name is now `<env>--<scope>--<name>`

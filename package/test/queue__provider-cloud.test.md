@@ -152,7 +152,7 @@ aux4 queue lease --name wq --provider cloud --visibility 30 | jq '{attempts, bod
 
 ````expect:json
 {
-  "attempts": 1,
+  "attempts": 0,
   "body": {
     "task": "hello"
   }
