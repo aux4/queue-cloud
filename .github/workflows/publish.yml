@@ -70,6 +70,7 @@ jobs:
       - uses: aux4/action@v1
         with:
           command: test
+          packages: aux4/queue-sqs
 
   publish:
     needs: [test-linux]

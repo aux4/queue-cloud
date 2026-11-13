@@ -1,11 +1,18 @@
-# aux4/queue-cloud
+# aux4/cloud-queue
 
 aux4.cloud provider plugin for [aux4/queue](https://hub.aux4.io/r/public/packages/aux4/queue)'s
 durable work-queue mode. Installing this package adds `cloud` as a `--provider` choice to the
 `aux4 queue` commands you already use — `create`, `delete`, `list`, `send`, `lease`, `ack`, `nack`,
 `renew`, `dlq`. It delegates to [aux4/queue-sqs](https://hub.aux4.io/r/public/packages/aux4/queue-sqs)
-(a declared dependency, installed automatically) with aux4.cloud-appropriate defaults baked in, so a
-package deployed to aux4.cloud gets a durable, isolated work queue with one flag and no extra setup.
+with aux4.cloud-appropriate defaults baked in, so a package deployed to aux4.cloud gets a durable,
+isolated work queue with one flag and no extra setup.
+
+`aux4/cloud-queue` does **not** depend on `aux4/queue-sqs` — it is installed separately. The aux4.cloud
+bot deployment installs `aux4/queue-sqs` and `aux4/cloud-queue` side by side and sets
+`queue.provider: cloud`; if `aux4/queue-sqs` is missing at call time, every `queue:cloud` operation
+that delegates to it fails fast with `Error: aux4/queue-sqs is not installed. aux4/cloud-queue
+delegates to it -- run: aux4 aux4 pkger install aux4/queue-sqs` rather than a confusing "command not
+found".
 
 This package does not add a new top-level command. Once installed alongside `aux4/queue`, use
 `aux4 queue <command> --provider cloud ...` exactly like you would with `--provider memory`,
@@ -14,10 +21,14 @@ This package does not add a new top-level command. Once installed alongside `aux
 ## Installation
 
 ```bash
-aux4 aux4 pkger install aux4/queue-cloud
+aux4 aux4 pkger install aux4/cloud-queue
+aux4 aux4 pkger install aux4/queue-sqs
 ```
 
-This also installs `aux4/queue-sqs` and `aux4/queue` (declared dependencies) if not already present.
+`aux4/cloud-queue` declares `aux4/queue` as its only dependency (installed automatically if not
+already present). `aux4/queue-sqs` is **not** a dependency and must be installed separately — on
+aux4.cloud, the bot deployment installs both packages together and configures `queue.provider:
+cloud`.
 
 ## What it adds on top of aux4/queue-sqs
 
@@ -27,7 +38,7 @@ This also installs `aux4/queue-sqs` and `aux4/queue` (declared dependencies) if 
   match a differently-named scope that happens to start with `dev-` (scope names may themselves
   contain a single `-`). The env comes from `--env`, or the `AUX4_CLOUD_ENV` environment variable
   the deployed machine runs with; the scope comes from `--scope`, or `AUX4_CLOUD_SCOPE`. Both are
-  **required** — `aux4/queue-cloud` refuses to create or address an unscoped queue rather than
+  **required** — `aux4/cloud-queue` refuses to create or address an unscoped queue rather than
   guess a default. The queue name itself (`--name`) must not contain `--` either, since it's
   reserved as the field separator; and the final name, including the `-dlq.fifo`/`.fifo` suffix
   SQS adds, must not exceed AWS's 80-character SQS queue-name limit — both are rejected with a

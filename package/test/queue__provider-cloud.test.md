@@ -4,13 +4,13 @@ These tests run against [ElasticMQ](https://github.com/softwaremill/elasticmq), 
 server, via `AWS_ENDPOINT_URL` -- the same local stand-in `aux4/queue-sqs`'s own tests use. No real
 AWS account or network access is used.
 
-Requires `aux4/queue-cloud` installed alongside `aux4/queue-sqs` and `aux4/queue`, the AWS CLI, and
+Requires `aux4/cloud-queue` installed alongside `aux4/queue-sqs` and `aux4/queue`, the AWS CLI, and
 an ElasticMQ server reachable at `http://localhost:19781`. In CI this is started as a job-level
 `services:` container (see `.github/workflows/publish.yml`); to run locally, start it yourself
 first:
 
 ```bash
-docker run -d --name queue-cloud-test-elasticmq -p 19781:9324 softwaremill/elasticmq-native
+docker run -d --name cloud-queue-test-elasticmq -p 19781:9324 softwaremill/elasticmq-native
 ```
 
 ````beforeAll

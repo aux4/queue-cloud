@@ -1,6 +1,6 @@
 #### Description
 
-`aux4/queue-cloud` is a provider plugin for `aux4/queue`. It adds `cloud` as a `--provider` choice
+`aux4/cloud-queue` is a provider plugin for `aux4/queue`. It adds `cloud` as a `--provider` choice
 to every `aux4 queue` work-queue command — `create`, `delete`, `list`, `send`, `lease`, `ack`,
 `nack`, `renew`, `dlq` — by delegating to `aux4/queue-sqs` (a declared dependency) with
 aux4.cloud-appropriate defaults applied automatically. There is no new top-level command: once this

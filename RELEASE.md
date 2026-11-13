@@ -1,10 +1,23 @@
 # Release Notes
 
+## 0.2.3 (unreleased)
+
+- **Renamed package**: `aux4/queue-cloud` → `aux4/cloud-queue` (aux4's standard is the `cloud-`
+  prefix, matching `aux4/cloud-file-sync` and `aux4/cloud-state-provider`). The GitHub repo moved
+  to `aux4/cloud-queue` (with a redirect from the old name); the old `aux4/queue-cloud` dev-hub
+  entry is now orphaned and will never be promoted to prod.
+- **Dependency change**: no longer depends on `aux4/queue-sqs` — only on `aux4/queue`. The
+  aux4.cloud bot deployment installs `aux4/queue-sqs` and `aux4/cloud-queue` side by side and
+  configures `queue.provider: cloud`. Every `queue:cloud` operation that delegates to `aux4 queue
+  sqs <op>` now checks first that `aux4/queue-sqs` is installed and fails with a clear
+  `aux4 aux4 pkger install aux4/queue-sqs` message (same pattern `aux4/queue`'s own provider
+  dispatcher uses) instead of a confusing "command not found".
+
 ## 0.2.2 (unreleased)
 
 - Test fix only (no code change here): updated this package's own `lease` test to expect
   `attempts: 0` on the first delivery, matching `aux4/queue-sqs`'s fix for the `attempts`
-  off-by-one (see `aux4/queue-sqs` RELEASE notes) -- `queue-cloud`'s `lease` delegates directly to
+  off-by-one (see `aux4/queue-sqs` RELEASE notes) -- `cloud-queue`'s `lease` delegates directly to
   `queue sqs lease`, so it inherited the same fix automatically once `aux4/queue-sqs` is updated.
 
 ## 0.2.0
