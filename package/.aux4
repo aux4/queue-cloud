@@ -315,9 +315,6 @@
             "set:hasDoubleDash=${response}",
             "if(hasDoubleDash==0) && echo \"Error: --env/--scope/--name must not contain '--' (reserved as the queue-name field separator)\" && exit 1 || true",
             "set:cloudName=${env}--${scope}--${name}",
-            "nout:aux4 queue sqs --help > /dev/null 2>&1; echo $?",
-            "set:sqsOk=${response}",
-            "if(sqsOk!=0) && echo 'Error: aux4/queue-sqs is not installed. aux4/cloud-queue delegates to it -- run: aux4 aux4 pkger install aux4/queue-sqs' >&2 && exit 1 || true",
             "AWS_DEFAULT_REGION=value(region) aux4 queue sqs renew --name value(cloudName) param(leaseId) param(id) param(visibility)"
           ],
           "private": true,
@@ -373,9 +370,6 @@
             "set:hasDoubleDash=${response}",
             "if(hasDoubleDash==0) && echo \"Error: --env/--scope/--name must not contain '--' (reserved as the queue-name field separator)\" && exit 1 || true",
             "set:cloudName=${env}--${scope}--${name}",
-            "nout:aux4 queue sqs --help > /dev/null 2>&1; echo $?",
-            "set:sqsOk=${response}",
-            "if(sqsOk!=0) && echo 'Error: aux4/queue-sqs is not installed. aux4/cloud-queue delegates to it -- run: aux4 aux4 pkger install aux4/queue-sqs' >&2 && exit 1 || true",
             "AWS_DEFAULT_REGION=value(region) aux4 queue sqs ack --name value(cloudName) param(leaseId) param(id)"
           ],
           "private": true,
@@ -426,9 +420,6 @@
             "set:hasDoubleDash=${response}",
             "if(hasDoubleDash==0) && echo \"Error: --env/--scope/--name must not contain '--' (reserved as the queue-name field separator)\" && exit 1 || true",
             "set:cloudName=${env}--${scope}--${name}",
-            "nout:aux4 queue sqs --help > /dev/null 2>&1; echo $?",
-            "set:sqsOk=${response}",
-            "if(sqsOk!=0) && echo 'Error: aux4/queue-sqs is not installed. aux4/cloud-queue delegates to it -- run: aux4 aux4 pkger install aux4/queue-sqs' >&2 && exit 1 || true",
             "AWS_DEFAULT_REGION=value(region) aux4 queue sqs nack --name value(cloudName) param(leaseId) param(id)"
           ],
           "private": true,

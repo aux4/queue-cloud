@@ -9,10 +9,11 @@ isolated work queue with one flag and no extra setup.
 
 `aux4/cloud-queue` does **not** depend on `aux4/queue-sqs` — it is installed separately. The aux4.cloud
 bot deployment installs `aux4/queue-sqs` and `aux4/cloud-queue` side by side and sets
-`queue.provider: cloud`; if `aux4/queue-sqs` is missing at call time, every `queue:cloud` operation
-that delegates to it fails fast with `Error: aux4/queue-sqs is not installed. aux4/cloud-queue
-delegates to it -- run: aux4 aux4 pkger install aux4/queue-sqs` rather than a confusing "command not
-found".
+`queue.provider: cloud`; if `aux4/queue-sqs` is missing, `create`, `delete`, `send`, `lease` and
+`dlq` fail fast with `Error: aux4/queue-sqs is not installed. aux4/cloud-queue delegates to it --
+run: aux4 aux4 pkger install aux4/queue-sqs` rather than a confusing "command not found". `renew`,
+`ack` and `nack` skip that check: they run on every lease heartbeat and only ever follow a
+successful `lease`, so the extra process would only eat into the renew window.
 
 This package does not add a new top-level command. Once installed alongside `aux4/queue`, use
 `aux4 queue <command> --provider cloud ...` exactly like you would with `--provider memory`,

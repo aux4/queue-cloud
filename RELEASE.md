@@ -1,6 +1,14 @@
 # Release Notes
 
-## 0.2.3 (unreleased)
+## 0.2.4
+
+- `renew`, `ack` and `nack` no longer run the `aux4/queue-sqs` install check before every call.
+  They run on every lease heartbeat and always follow a successful `lease`, so the extra `aux4`
+  process only shortened the renew window. `create`, `delete`, `send`, `lease` and `dlq` keep the
+  check and its clear "install aux4/queue-sqs" error. Matches `aux4/queue` 0.2.5, which made the
+  same change in its own dispatcher.
+
+## 0.2.3
 
 - **Renamed package**: `aux4/queue-cloud` → `aux4/cloud-queue` (aux4's standard is the `cloud-`
   prefix, matching `aux4/cloud-file-sync` and `aux4/cloud-state-provider`). The GitHub repo moved
