@@ -53,6 +53,10 @@ dev--cloudtest--wq.fifo
 
 ### should let --env/--scope override AUX4_CLOUD_ENV/AUX4_CLOUD_SCOPE locally
 
+````timeout
+15000
+````
+
 ````execute
 export AWS_ACCESS_KEY_ID=test
 export AWS_SECRET_ACCESS_KEY=test
@@ -209,6 +213,10 @@ exit=0
 ````
 
 ### list should return only this env+scope's queues, never a bare account-wide ListQueues
+
+````timeout
+15000
+````
 
 ````execute
 export AWS_ACCESS_KEY_ID=test
